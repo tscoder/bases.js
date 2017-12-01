@@ -5,15 +5,26 @@
 var bases = (typeof exports !== 'undefined' ? exports : (window.Bases = {}));
 
 // Returns a string representation of the given number for the given alphabet:
-bases.toAlphabet = function (num, alphabet) {
+bases.toAlphabet = function (mNum, alphabet, opts = {}) {
     var base = alphabet.length;
     var digits = [];    // these will be in reverse order since arrays are stacks
+
+    // Opts
+    var isShift1X = opts.is_shift_1x || false;
+
+    var num = isShift1X ? mNum - 1 : mNum,
+        chk_zero = isShift1X ? val => val >= 0 : val => val > 0
+        ;
 
     // execute at least once, even if num is 0, since we should return the '0':
     do {
         digits.push(num % base);    // TODO handle negatives properly?
         num = Math.floor(num / base);
-    } while (num > 0);
+        if (isShift1X)
+            num -= 1;
+        // console.log(`${num}, ${digits}`);
+    } while (chk_zero(num));
+    
 
     var chars = [];
     while (digits.length) {
@@ -23,16 +34,22 @@ bases.toAlphabet = function (num, alphabet) {
 };
 
 // Returns an integer representation of the given string for the given alphabet:
-bases.fromAlphabet = function (str, alphabet) {
+bases.fromAlphabet = function (str, alphabet, opts) {
+    // Opts
+    var isShift1X = opts.is_shift_1x || false;
+
     var base = alphabet.length;
     var pos = 0;
     var num = 0;
-    var c;
+    var c, ind_alphabet;
 
     while (str.length) {
         c = str[str.length - 1];
         str = str.substr(0, str.length - 1);
-        num += Math.pow(base, pos) * alphabet.indexOf(c);
+        ind_alphabet = alphabet.indexOf(c);
+        if (isShift1X)
+            ind_alphabet += 1;
+        num += Math.pow(base, pos) * ind_alphabet;
         pos++;
     }
 
@@ -65,6 +82,9 @@ bases.KNOWN_ALPHABETS[62] = bases.NUMERALS + bases.LETTERS_LOWERCASE + bases.LET
 // For base-26, we'll assume the user wants just the letter alphabet:
 bases.KNOWN_ALPHABETS[26] = bases.LETTERS_LOWERCASE;
 
+// For base-26, Upper case alphabet:
+bases.KNOWN_ALPHABETS['26U'] = bases.LETTERS_UPPERCASE;
+
 // We'll also add a similar base-52, just letters, lowercase then uppercase:
 bases.KNOWN_ALPHABETS[52] = bases.LETTERS_LOWERCASE + bases.LETTERS_UPPERCASE;
 
@@ -89,11 +109,11 @@ bases.KNOWN_ALPHABETS[32] = bases.NUMERALS + bases.LETTERS_UPPERCASE.replace(/[I
 
 // Closure helper for convenience aliases like bases.toBase36():
 function makeAlias (base, alphabet) {
-    bases['toBase' + base] = function (num) {
-        return bases.toAlphabet(num, alphabet);
+    bases['toBase' + base] = function (num, opts) {
+        return bases.toAlphabet(num, alphabet, opts);
     };
-    bases['fromBase' + base] = function (str) {
-        return bases.fromAlphabet(str, alphabet);
+    bases['fromBase' + base] = function (str, opts) {
+        return bases.fromAlphabet(str, alphabet, opts);
     };
 }
 
@@ -105,10 +125,10 @@ for (var base in bases.KNOWN_ALPHABETS) {
 }
 
 // And a generic alias too:
-bases.toBase = function (num, base) {
-    return bases.toAlphabet(num, bases.KNOWN_ALPHABETS[base]);
+bases.toBase = function (num, base, opts) {
+    return bases.toAlphabet(num, bases.KNOWN_ALPHABETS[base], opts);
 };
 
 bases.fromBase = function (str, base) {
-    return bases.fromAlphabet(str, bases.KNOWN_ALPHABETS[base]);
+    return bases.fromAlphabet(str, bases.KNOWN_ALPHABETS[base], opts);
 };
